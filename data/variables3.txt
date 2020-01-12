@@ -1,0 +1,7 @@
+growth
+dbh0
+canopyDistance
+latitude
+longitude
+mean_temp_period_3_lag
+tot_pp_period3_lag
