@@ -1,5 +1,5 @@
 ########################################
-# Prepare data for random forest
+# Prepare data for random forest (script for the server)
 # Will Vieira
 # January, 09 2020
 ########################################
@@ -21,10 +21,8 @@ set.seed(0.0)
 
 ## Import datasets
 
-  #mort = readRDS('../Mortality/data/mort_dt.RDS')
-  #growth = readRDS('../Mortality/data/growth_dt.RDS')
-  mort = readRDS('../../ownCloud/toSave/Bayes-trait-model/cleanProject/data/mort_dt.RDS')
-  growth = readRDS('../../ownCloud/toSave/Bayes-trait-model/cleanProject/data/growth_dt.RDS')
+  mort = readRDS('../Mortality/data/mort_dt.RDS')
+  growth = readRDS('../Mortality/data/growth_dt.RDS')
 
 ##
 
@@ -33,7 +31,7 @@ set.seed(0.0)
 ## Folders
 
   dir.create('rawData')
-  dir.create('data')
+  dir.create('output')
 
 ##
 
@@ -43,7 +41,7 @@ set.seed(0.0)
 
   # get and save species_id
   sp_ids = unique(mort$species_id)
-  write(sp_ids, file = 'rawData/sp_ids.txt')
+  write(sp_ids, file = 'data/sp_ids.txt')
 
   # split by vital rate, species id and training/validation data and save it all
   count = 1
@@ -62,7 +60,7 @@ set.seed(0.0)
       training <- db_sp[indexes, ]
 
       # save RDS
-      saveRDS(training, file = paste0('data/', vital, '_', sp, '.RDS'))
+      saveRDS(training, file = paste0('rawData/', vital, '_', sp, '.RDS'))
 
       cat('   preparing data ', floor((count/(2 * length(sp_ids))) * 100), '%\r')
       count = count + 1

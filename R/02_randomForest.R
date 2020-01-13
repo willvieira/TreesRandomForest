@@ -35,8 +35,9 @@ set.seed(0.0)
   varsToKeep = as.character(read.table(paste0('data/variables', var, '.txt'))[, 1])
 
   # random forest parameters
-  nTrees = args[3]
-  Mtry = args[4]
+  nTrees = as.numeric(args[3])
+  Mtry = as.numeric(args[4])
+
 
 ##
 
