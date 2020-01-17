@@ -28,20 +28,23 @@
 
 ## Generate all variables to simulate
 
-# read species_id
-sp_ids = as.character(read.table('data/sp_ids.txt')[, 1])
+  # read species_id
+  sp_ids = as.character(read.table('data/sp_ids.txt')[, 1])
 
-# predictors variables (3 sets)
-variables = 1:3
+  # read trainingSize of each species id
+  trainingSize <- read.table('data/trainingSize_spIds.txt')
 
-# number of trees
-nbTrees = 1000
+  # predictors variables (3 sets)
+  variables = 1:3
 
-# number of variables selected at each division of the trees
-nbMtry = c(2, 3, 4, 5, 6)
+  # number of trees
+  nbTrees = 1000
 
-tSim = length(sp_ids) * length(variables) * length(nbTrees) * length(nbMtry)
-print(paste('Generating a total of', tSim, 'simulations'))
+  # number of variables selected at each division of the trees
+  nbMtry = c(2, 3, 4, 5, 6)
+
+  tSim = length(sp_ids) * length(variables) * length(nbTrees) * length(nbMtry)
+  print(paste('Generating a total of', tSim, 'simulations'))
 
 ##
 
@@ -62,12 +65,15 @@ for(sp in sp_ids) {
         # send me email for all the info for the last simulation
         mail = ifelse(job == tSim, 'ALL', 'FAIL')
 
+        # Calculate memory usage depending on training size (factor of 0.08)
+        memory <- floor(trainingSize[sp, 2] * 0.08)
+
 # Bash + Rscript
 bash <- paste0('#!/bin/bash
 
 #SBATCH --account=def-dgravel
 #SBATCH -t 0-10:00:00
-#SBATCH --mem=11000
+#SBATCH --mem=', memory, '
 #SBATCH --job-name="', simName, '"
 #SBATCH --mail-user=willian.vieira@usherbrooke.ca
 #SBATCH --mail-type=', mail, '

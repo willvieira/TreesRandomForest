@@ -43,6 +43,9 @@ set.seed(0.0)
   sp_ids = unique(mort$species_id)
   write(sp_ids, file = 'data/sp_ids.txt')
 
+  # vector to save trainingSize for each species id
+  trainingSize_spIds = c()
+
   # split by vital rate, species id and training/validation data and save it all
   count = 1
   for(vital in c('mort', 'growth'))
@@ -59,6 +62,8 @@ set.seed(0.0)
       # Assign the data to the correct sets
       training <- db_sp[indexes, ]
 
+      # save trainingSize
+      trainingSize_spIds[which(sp == sp_ids)] <- trainingSize
       # save RDS
       saveRDS(training, file = paste0('rawData/', vital, '_', sp, '.RDS'))
 
@@ -67,6 +72,9 @@ set.seed(0.0)
 
     }
   }
+
+  # save training size
+  write.table(data.frame(sp_ids, trainingSize_spIds), file = 'data/trainingSize_spIds.txt')
 
 ##
 
