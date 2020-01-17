@@ -35,10 +35,10 @@ sp_ids = as.character(read.table('data/sp_ids.txt')[, 1])
 variables = 1:3
 
 # number of trees
-nbTrees = c(100, 200, 400, 500)
+nbTrees = 1000
 
 # number of variables selected at each division of the trees
-nbMtry = c(2, 3, 4)
+nbMtry = c(2, 3, 4, 5, 6)
 
 tSim = length(sp_ids) * length(variables) * length(nbTrees) * length(nbMtry)
 print(paste('Generating a total of', tSim, 'simulations'))
@@ -66,8 +66,8 @@ for(sp in sp_ids) {
 bash <- paste0('#!/bin/bash
 
 #SBATCH --account=def-dgravel
-#SBATCH -t 2-00:00:00
-#SBATCH --mem=3000
+#SBATCH -t 0-10:00:00
+#SBATCH --mem=11000
 #SBATCH --job-name="', simName, '"
 #SBATCH --mail-user=willian.vieira@usherbrooke.ca
 #SBATCH --mail-type=', mail, '
@@ -89,8 +89,5 @@ Rscript /home/view2301/TreesRandomForest/R/02_randomForest.R ', sp, ' ', var, ' 
     }
   }
 }
-#
-
-
 
 ##

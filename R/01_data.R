@@ -69,3 +69,11 @@ set.seed(0.0)
   }
 
 ##
+
+
+
+## Clean up
+
+  rm(list = c('mort', 'growth', 'db_sp'))
+
+##

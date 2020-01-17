@@ -27,8 +27,6 @@ set.seed(0.0)
 
   # species_id mortality and growth data
   sp = args[1]
-  db_sp_mort = readRDS(paste0('rawData/mort_', sp, '.RDS'))
-  db_sp_growth = readRDS(paste0('rawData/growth_', sp, '.RDS'))
 
   # variables
   var = args[2]
@@ -38,6 +36,7 @@ set.seed(0.0)
   nTrees = as.numeric(args[3])
   Mtry = as.numeric(args[4])
 
+  print('Running job:');print(paste(sp, var, nTrees, Mtry, sep = '.'))
 
 ##
 
@@ -45,6 +44,9 @@ set.seed(0.0)
 
 ## Run randomForest for growth
   print('Running growth model')
+
+  # get growth data
+  db_sp_growth = readRDS(paste0('rawData/growth_', sp, '.RDS'))
 
   # keep only variables of interest
   db_sp_growth = db_sp_growth[, varsToKeep, with = FALSE]
@@ -62,69 +64,34 @@ set.seed(0.0)
   saveRDS(rf_regression,
   file = paste0('output/growth_', sp, '_var', var, '_nTrees', nTrees, '_Mtry', Mtry, '.RDS'))
 
-##
-
-
-
-## Run randomForest for mortality (set 1)
-  print('Running mortality model (set 1)')
-
-  # keep only variables of interest
-  db_sp_mort1 = db_sp_mort[, c('mort', 'deltaYear', varsToKeep), with = FALSE]
-
-  # perfom random forest
-  rf_survival1 <- ranger::ranger(survival::Surv(deltaYear, mort) ~ .,
-                                 data = db_sp_mort1,
-                                 num.trees = nTrees,
-                                 mtry = Mtry,
-                                 importance = 'impurity_corrected',
-                                 write.forest = FALSE,
-                                 verbose = FALSE)
-
-  saveRDS(rf_survival1,
-  file = paste0('output/mort1_', sp, '_var', var, '_nTrees', nTrees, '_Mtry', Mtry, '.RDS'))
-
-##
-
-
-
-## Run randomForest for mortality (set 2)
-  print('Running mortality model (set 2)')
-
-  # keep only variables of interest
-  db_sp_mort2 = db_sp_mort[, c('mort', 'year0', 'year1', varsToKeep), with = FALSE]
-
-  # perfom random forest
-  rf_survival2 <- ranger::ranger(survival::Surv(year0, year1, mort, type = 'interval') ~ .,
-                                 data = db_sp_mort2,
-                                 num.trees = nTrees,
-                                 mtry = Mtry,
-                                 importance = 'impurity_corrected',
-                                 write.forest = FALSE,
-                                 verbose = FALSE)
-
-  saveRDS(rf_survival2,
-  file = paste0('output/mort2_', sp, '_var', var, '_nTrees', nTrees, '_Mtry', Mtry, '.RDS'))
+  # clean memory
+  rm(list = c('db_sp_growth', 'rf_regression'))
 
 ##
 
 
 
 ## Run randomForest for mortality (set 3)
-  print('Running mortality model (set 3)')
+  print('Running mortality model')
+
+  # get mortality data
+  db_sp_mort = readRDS(paste0('rawData/mort_', sp, '.RDS'))
 
   # keep only variables of interest
-  db_sp_mort3 = db_sp_mort[, c('mort', varsToKeep), with = FALSE]
+  db_sp_mort = db_sp_mort[, c('mort', varsToKeep), with = FALSE]
 
   # perfom random forest
-  rf_survival3 <- ranger::ranger(mort ~ .,
-                                 data = db_sp_mort3,
+  rf_survival <- ranger::ranger(as.factor(mort) ~ .,
+                                 data = db_sp_mort,
                                  num.trees = nTrees,
                                  mtry = Mtry,
                                  importance = 'impurity_corrected',
                                  write.forest = FALSE)
 
-  saveRDS(rf_survival3,
-  file = paste0('output/mort3_', sp, '_var', var, '_nTrees', nTrees, '_Mtry', Mtry, '.RDS'))
+  saveRDS(rf_survival,
+  file = paste0('output/mort_', sp, '_var', var, '_nTrees', nTrees, '_Mtry', Mtry, '.RDS'))
+
+  # clean memory
+  rm(list = c('db_sp_mort', 'rf_survival'))
 
 ##
