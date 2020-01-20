@@ -58,7 +58,6 @@
           for(mty in nbMtry) {
             filesName[count] = paste0(vital, '_', sp, '_var', var, '_nTrees', nbTrees, '_Mtry', mty, '.RDS')
             count <- count + 1
-            }
           }
         }
       }
@@ -81,13 +80,34 @@
       missingSim <- filesName[!(filesName %in% Files)]
       print('Not loading simulations because of missing simulations:')
       print(missingSim)
+      toLoad = FALSE
     }else {
       print('All simulations are already loaded')
+      toLoad = FALSE
     }
 
   }else {
     print('Loading simulations...')
     system(server_info)
+    toLoad = TRUE
   }
 
+##
+
+
+
+## Last check if all simulations were available in the server (after loading)
+
+  if(toLoad) {
+
+    Files <- dir('output')
+
+    if(all(filesName %in% Files)) {
+      print('All files were correctly loaded')
+    }else {
+      missingSim <- filesName[!(filesName %in% Files)]
+      print('These simulations were not found in the server:')
+      print(missingSim)
+    }
+  }
 ##
