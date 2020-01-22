@@ -38,6 +38,9 @@ set.seed(0.0)
 
   print('Running job:');print(paste(sp, var, nTrees, Mtry, sep = '.'))
 
+  # Save forest for all species when var == 2 and mtry == 6
+  writeForest <- ifelse(var == 2 & Mtry == 6, TRUE, FALSE)
+
 ##
 
 
@@ -57,7 +60,7 @@ set.seed(0.0)
                                   num.trees = nTrees,
                                   mtry = Mtry,
                                   importance = 'impurity_corrected',
-                                  write.forest = FALSE,
+                                  write.forest = writeForest,
                                   verbose = FALSE)
 
   # save results
@@ -86,7 +89,7 @@ set.seed(0.0)
                                  num.trees = nTrees,
                                  mtry = Mtry,
                                  importance = 'impurity_corrected',
-                                 write.forest = FALSE)
+                                 write.forest = writeForest)
 
   saveRDS(rf_survival,
   file = paste0('output/mort_', sp, '_var', var, '_nTrees', nTrees, '_Mtry', Mtry, '.RDS'))
