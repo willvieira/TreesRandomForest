@@ -1,0 +1,27 @@
+Title: Place to store my random forest analysis
+Version: 0.0.0.1
+Authors@R:
+    person(given = "Willian",
+           family = "Vieira",
+           role = c("aut", "cre"),
+           email = "w.vieiraw@gmail.com",
+           comment = c(ORCID = "0000-0003-0283-4570"))
+License: MIT + file LICENSE
+Encoding: UTF-8
+Imports:
+    ggplot2,
+    tidyr,
+    dplyr,
+    ranger,
+    randomForestExplainer,
+    githubinstall
+RoxygenNote: 7.0.2
+Suggests:
+    knitr,
+    rmarkdown,
+    devtools,
+    covr,
+    pkgdown,
+    testthat
+VignetteBuilder: knitr
+Roxygen: list(markdown = TRUE)
