@@ -1,0 +1,244 @@
+---
+title: Random Forest for Trees
+author: Willian Vieira
+date: "`r paste('Last updated on', format(Sys.time(), '%d %B, %Y'))`"
+
+---
+
+```{r load R packages, echo=FALSE}
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(tidyr))
+suppressPackageStartupMessages(library(dplyr))
+```
+
+```{r getting variables, echo=FALSE}
+
+  # species_id
+  sp_ids = as.character(read.table('data/sp_ids.txt')[, 1])
+
+  # other variables from the simulation file
+  rFile <- readLines('R/03_runSimulations.R')
+
+  # variables
+  eval(parse(text =
+    rFile[which(sapply(rFile, function(x) grep('variables = ', x)) == 1)]))
+
+  # nbTrees
+  eval(parse(text =
+    rFile[which(sapply(rFile, function(x) grep('nbTrees = ', x)) == 1)]))
+
+  # nbMtry
+  eval(parse(text =
+    rFile[which(sapply(rFile, function(x) grep('nbMtry = ', x)) == 1)]))
+
+```
+
+# Introduction
+
+Here I use the random forest method to extract the power of different variables to explain **growth** and **mortality** of tree species.
+I use the forest inventory data base for the eastern North American forest that contains... #TODO
+
+```{r explanatory variables, echo=FALSE}
+  vars = as.character(read.table('data/variables1.txt')[, 1])
+```
+
+For each tree species in the data base (total of `r length(sp_ids)`), we will run a random forest for growth and mortality with different parameters and explanatory variables.
+Then we evaluate the simulation based on the R$^2$ for the growth and ... #TODO
+We further check which variables have a better explanatory power over the response variable.
+
+# Simulations
+
+For each tree species, we ran a random forest varying (i) the explanatory variables, and (ii) the number of variables to possibly split at in each node (`mtry`).
+The `r length(variables)` sets of variables are the following:
+
+```{r table of variables, echo=FALSE}
+# get variables
+for(var in variables) assign(paste0('var', var), read.table(paste0('data/variables', var, '.txt'))[, 1])
+for(var in variables) {print(paste('set', var)); print(as.character(get(paste0('var', var)))); cat('\n')}
+```
+
+For each set of variables, `mtry` varied as `r nbMtry`, with a fixed number of `r nbTrees` trees.
+
+# Summary
+
+```{r load simulations, echo=FALSE}
+for(vital in c('growth', 'mort')) {
+  for(sp in sp_ids) {
+    for(var in variables) {
+      for(tree in nbTrees) {
+        for(mty in nbMtry) {
+          simName = paste0(vital, sp, var, tree, mty)
+          simLoc = paste0('output/', vital, '_', sp, '_var', var, '_nTrees', nbTrees, '_Mtry', mty, '.RDS')
+          assign(simName, readRDS(simLoc))
+        }
+      }
+    }
+  }
+}
+```
+
+```{r prepare data, echo=FALSE}
+
+df <- expand.grid(c('growth', 'mort'), sp_ids, variables, nbTrees, nbMtry)
+names(df) <- c('vital', 'sp', 'var', 'nbTrees', 'nbMtry')
+df$var <- as.factor(df$var)
+df$nbTrees <- as.factor(df$nbTrees)
+df$nbMtry <- as.factor(df$nbMtry)
+
+# get explanatory power
+getPower <- function(x)
+{
+  sim = get(paste(x, sep = '', collapse = ''))
+  simType = sim$treetype
+
+  if(simType == 'Regression') {
+    pw = sim$r.squared
+  }else if(simType == 'Classification') {
+    pw = 1 - sim$prediction.error
+  }
+  return(pw)
+}
+
+df$pw <- apply(df, 1, getPower)
+
+# get importance
+import <- as.data.frame(matrix(rep(NA, length(var1) * nrow(df)), ncol = length(var1)))
+names(import) <- var1
+df <- cbind(df, import)
+
+simNames <- apply(df[, 1:5], 1, paste, collapse = '')
+for(i in 1:nrow(df)) {
+  impRF <- ranger::importance(get(simNames[i]))
+  df[i, names(impRF)] <- impRF
+}
+
+# tranform to long format
+dfLong = gather(df, variable, importance, growth:tot_pp_period3_lag, factor_key = TRUE)
+```
+
+
+## Variables set
+
+```{r variables set, echo=FALSE}
+p = ggplot(data = df) +
+    aes(var, pw) +
+    geom_boxplot() +
+    facet_grid(~vital,
+              labeller = labeller(vital = setNames(c('growth (Rsquared)',
+                                  'mort (1 - OOB prediction error)'),
+                                  c('growth', 'mort')))) +
+    theme_classic() +
+    xlab("Variable set") +
+    ylab("Explanatory power of variables")
+
+print(p)
+```
+
+Assuming the set of variables `var2` was the best to explain growth and mortality, let's see the importance of the variables present in the set `var2`:
+
+```{r variable set importance, echo=FALSE}
+p = ggplot(data = droplevels(subset(dfLong, var == 2 & variable %in% var2))) +
+    aes(reorder(variable, importance, FUN = median), importance) +
+    geom_boxplot() +
+    coord_flip() +
+    facet_grid(~vital, scales = "free_x") +
+    theme_classic() +
+    xlab("Variables in set 2") +
+    ylab("Importance")
+
+suppressWarnings(print(p))
+```
+
+Now for the other two sets of variables (`var1` and `var3`):
+
+```{r variable set importance2, echo=FALSE}
+p = ggplot(data = droplevels(subset(dfLong, var == 1 & variable %in% var1))) +
+    aes(reorder(variable, importance, FUN = median), importance) +
+    geom_boxplot() +
+    coord_flip() +
+    facet_grid(~vital, scales = "free_x") +
+    theme_classic() +
+    xlab("Variables in set 1") +
+    ylab("Importance")
+
+suppressWarnings(print(p))
+```
+
+```{r variable set importance3, echo=FALSE}
+p = ggplot(data = droplevels(subset(dfLong, var == 3 & variable %in% var3))) +
+    aes(reorder(variable, importance, FUN = median), importance) +
+    geom_boxplot() +
+    coord_flip() +
+    facet_grid(~vital, scales = "free_x") +
+    theme_classic() +
+    xlab("Variables in set 3") +
+    ylab("Importance")
+
+suppressWarnings(print(p))
+```
+
+## Number of variables to possibly split at in each node
+
+```{r mtry, echo=FALSE}
+p = ggplot(data = df) +
+    aes(nbMtry, pw) +
+    geom_boxplot() +
+    facet_grid(~vital,
+              labeller = labeller(vital = setNames(c('growth (Rsquared)',
+                                  'mort (1 - OOB prediction error)'),
+                                  c('growth', 'mort')))) +
+    theme_classic() +
+    xlab("Number of variables to possibly split at in each node (mtry)") +
+    ylab("Explanatory power of variables")
+
+print(p)
+```
+
+## Individual species response
+
+```{r species_id, echo=FALSE}
+p = ggplot(data = df) +
+    aes(reorder(sp, pw, FUN = median), pw) +
+    geom_boxplot() +
+    coord_flip() +
+    facet_grid(~vital,
+              labeller = labeller(vital = setNames(c('growth (Rsquared)',
+                                  'mort (1 - OOB prediction error)'),
+                                  c('growth', 'mort')))) +
+    theme_classic() +
+    xlab("Species id") +
+    ylab("Explanatory power of variables")
+
+print(p)
+```
+
+
+```{r species_id vs n, echo=FALSE}
+
+pwSp <- df %>%
+        group_by(vital, sp) %>%
+        summarise(median = median(pw))
+
+getSampleSize <- function(x)
+{
+  sim = simNames[grep(paste(x, sep = '', collapse = ''), simNames)[1]]
+  return (get(sim)$num.samples)
+}
+
+pwSp$sampleSize <- apply(pwSp[, 1:2], 1, getSampleSize)
+
+
+p = ggplot(data = pwSp) +
+    aes(sampleSize, median) +
+    geom_point() +
+    geom_smooth(method='lm', formula= y ~ x + I(x^2)) +
+    facet_grid(~vital,
+              labeller = labeller(vital = setNames(c('growth (Rsquared)',
+                                  'mort (1 - OOB prediction error)'),
+                                  c('growth', 'mort')))) +
+    theme_classic() +
+    xlab("Sample size") +
+    ylab("Explanatory power of variables")
+
+print(p)
+```
