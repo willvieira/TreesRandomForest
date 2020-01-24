@@ -36,14 +36,15 @@ suppressPackageStartupMessages(library(dplyr))
 # Introduction
 
 Here I use the random forest method to extract the power of different variables to explain **growth** and **mortality** of tree species.
-I use the forest inventory data base for the eastern North American forest that contains... #TODO
+I use the forest inventory data base for the eastern North American forest.
 
 ```{r explanatory variables, echo=FALSE}
   vars = as.character(read.table('data/variables1.txt')[, 1])
 ```
 
 For each tree species in the data base (total of `r length(sp_ids)`), we will run a random forest for growth and mortality with different parameters and explanatory variables.
-Then we evaluate the simulation based on the R$^2$ for the growth and ... #TODO
+Then we evaluate the simulation based on the R$^2$ for the growth and the out-of-bag estimate (1 - OOB) for mortality.
+For mortality, in which alive events are much more frequent than dead events, we avoid overestimating OOB by balancing the sampling weights to have the same number of observations from each class as suggested by Janitza & Hornung ([2018](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0201904)).
 We further check which variables have a better explanatory power over the response variable.
 
 # Simulations
