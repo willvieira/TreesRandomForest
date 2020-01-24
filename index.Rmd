@@ -61,66 +61,69 @@ For each set of variables, `mtry` varied as `r nbMtry`, with a fixed number of `
 
 # Summary
 
-```{r load simulations, echo=FALSE}
+```{r prepare data, echo=FALSE}
+# data frame to save explanatory power
+dfPw <- expand.grid(c('growth', 'mort'), sp_ids, variables, nbTrees, nbMtry)
+names(dfPw) <- c('vital', 'sp', 'var', 'nbTrees', 'nbMtry')
+dfPw$var <- as.factor(dfPw$var)
+dfPw$nbTrees <- as.factor(dfPw$nbTrees)
+dfPw$nbMtry <- as.factor(dfPw$nbMtry)
+dfPw$pw <- rep(NA, nrow(dfPw))
+
+# data frame to get importance
+dfImportance <- as.data.frame(matrix(rep(NA, length(var1) * nrow(dfPw)), ncol = length(var1)))
+names(dfImportance) <- var1
+
+# load each simulation and import all information
+count = 1
 for(vital in c('growth', 'mort')) {
   for(sp in sp_ids) {
     for(var in variables) {
       for(tree in nbTrees) {
         for(mty in nbMtry) {
-          simName = paste0(vital, sp, var, tree, mty)
-          simLoc = paste0('output/', vital, '_', sp, '_var', var, '_nTrees', nbTrees, '_Mtry', mty, '.RDS')
-          assign(simName, readRDS(simLoc))
+
+          # get dfPw row
+          Row <- which(dfPw$vital == vital & dfPw$sp == sp & dfPw$var == var &dfPw$nbTrees == tree & dfPw$nbMtry == mty)
+
+          # load simulation
+          sim <- readRDS(paste0('output/', vital, '_', sp, '_var', var, '_nTrees', nbTrees, '_Mtry', mty, '.RDS'))
+
+          # get explanatory power
+          if(sim$treetype == 'Regression') {
+            dfPw[Row, 'pw'] = sim$r.squared
+          }else if(sim$treetype == 'Classification') {
+            dfPw[Row, 'pw'] = 1 - sim$prediction.error
+          }
+
+          # get importance
+          impRF <- ranger::importance(sim)
+          dfImportance[Row, names(impRF)] <- impRF
+
+          cat('   loading simulations', floor(count/nrow(dfPw) * 100), '%\r')
+          count <- count + 1
         }
       }
     }
   }
 }
-```
 
-```{r prepare data, echo=FALSE}
-
-df <- expand.grid(c('growth', 'mort'), sp_ids, variables, nbTrees, nbMtry)
-names(df) <- c('vital', 'sp', 'var', 'nbTrees', 'nbMtry')
-df$var <- as.factor(df$var)
-df$nbTrees <- as.factor(df$nbTrees)
-df$nbMtry <- as.factor(df$nbMtry)
-
-# get explanatory power
-getPower <- function(x)
-{
-  sim = get(paste(x, sep = '', collapse = ''))
-  simType = sim$treetype
-
-  if(simType == 'Regression') {
-    pw = sim$r.squared
-  }else if(simType == 'Classification') {
-    pw = 1 - sim$prediction.error
-  }
-  return(pw)
-}
-
-df$pw <- apply(df, 1, getPower)
-
-# get importance
-import <- as.data.frame(matrix(rep(NA, length(var1) * nrow(df)), ncol = length(var1)))
-names(import) <- var1
-df <- cbind(df, import)
-
-simNames <- apply(df[, 1:5], 1, paste, collapse = '')
-for(i in 1:nrow(df)) {
-  impRF <- ranger::importance(get(simNames[i]))
-  df[i, names(impRF)] <- impRF
-}
 
 # tranform to long format
-dfLong = gather(df, variable, importance, growth:tot_pp_period3_lag, factor_key = TRUE)
-```
+dfLong = gather(cbind(dfPw, dfImportance), variable, importance, growth:tot_pp_period3_lag, factor_key = TRUE)
 
+
+## Get sample size with median pw
+pwSp <- dfPw %>%
+        group_by(vital, sp) %>%
+        summarise(median = median(pw))
+
+pwSp <- merge(pwSp, read.table('data/trainingSize_spIds.txt'), by.x = c('vital', 'sp'), by.y = c('vital', 'sp'))
+```
 
 ## Variables set
 
 ```{r variables set, echo=FALSE}
-p = ggplot(data = df) +
+p = ggplot(data = dfPw) +
     aes(var, pw) +
     geom_boxplot() +
     facet_grid(~vital,
@@ -180,7 +183,7 @@ suppressWarnings(print(p))
 ## Number of variables to possibly split at in each node
 
 ```{r mtry, echo=FALSE}
-p = ggplot(data = df) +
+p = ggplot(data = dfPw) +
     aes(nbMtry, pw) +
     geom_boxplot() +
     facet_grid(~vital,
@@ -197,7 +200,7 @@ print(p)
 ## Individual species response
 
 ```{r species_id, echo=FALSE}
-p = ggplot(data = df) +
+p = ggplot(data = dfPw) +
     aes(reorder(sp, pw, FUN = median), pw) +
     geom_boxplot() +
     coord_flip() +
@@ -214,22 +217,8 @@ print(p)
 
 
 ```{r species_id vs n, echo=FALSE}
-
-pwSp <- df %>%
-        group_by(vital, sp) %>%
-        summarise(median = median(pw))
-
-getSampleSize <- function(x)
-{
-  sim = simNames[grep(paste(x, sep = '', collapse = ''), simNames)[1]]
-  return (get(sim)$num.samples)
-}
-
-pwSp$sampleSize <- apply(pwSp[, 1:2], 1, getSampleSize)
-
-
 p = ggplot(data = pwSp) +
-    aes(sampleSize, median) +
+    aes(trainingSize, median) +
     geom_point() +
     geom_smooth(method='lm', formula= y ~ x + I(x^2)) +
     facet_grid(~vital,
