@@ -44,7 +44,7 @@ set.seed(0.0)
   write(sp_ids, file = 'data/sp_ids.txt')
 
   # vector to save trainingSize for each species id
-  trainingSize_spIds = c()
+  trainingSize_spIds = as.data.frame(matrix(NA, ncol = 3, nrow = length(sp_ids) * 2))
 
   # split by vital rate, species id and training/validation data and save it all
   count = 1
@@ -63,7 +63,7 @@ set.seed(0.0)
       training <- db_sp[indexes, ]
 
       # save trainingSize
-      trainingSize_spIds[which(sp == sp_ids)] <- trainingSize
+      trainingSize_spIds[count, ] <- c(vital, sp, trainingSize)
       # save RDS
       saveRDS(training, file = paste0('rawData/', vital, '_', sp, '.RDS'))
 
@@ -74,7 +74,8 @@ set.seed(0.0)
   }
 
   # save training size
-  write.table(data.frame(sp_ids, trainingSize_spIds), file = 'data/trainingSize_spIds.txt')
+  names(trainingSize_spIds) <- c('vital', 'sp', 'trainingSize')
+  write.table(trainingSize_spIds, file = 'data/trainingSize_spIds.txt')
 
 ##
 
