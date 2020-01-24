@@ -15,7 +15,6 @@
 
 
 library(ranger)
-library(survival)
 library(data.table)
 set.seed(0.0)
 
@@ -83,9 +82,17 @@ set.seed(0.0)
   # keep only variables of interest
   db_sp_mort = db_sp_mort[, c('mort', varsToKeep), with = FALSE]
 
+  #Compute weights to balance the RF
+  w <- 1/table(db_sp_mort$mort)
+  w <- w/sum(w)
+  weights <- rep(0, nrow(db_sp_mort))
+  weights[db_sp_mort$mort == 0] <- w['0']
+  weights[db_sp_mort$mort == 1] <- w['1']
+
   # perfom random forest
   rf_survival <- ranger::ranger(as.factor(mort) ~ .,
                                  data = db_sp_mort,
+                                 case.weights = weights,
                                  num.trees = nTrees,
                                  mtry = Mtry,
                                  importance = 'impurity_corrected',
