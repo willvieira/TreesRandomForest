@@ -14,11 +14,12 @@ Imports:
     dplyr,
     ranger,
     randomForestExplainer,
-    githubinstall
-RoxygenNote: 7.0.2
-Suggests:
+    githubinstall,
     knitr,
     rmarkdown,
+    DT
+RoxygenNote: 7.0.2
+Suggests:
     devtools,
     covr,
     pkgdown,
