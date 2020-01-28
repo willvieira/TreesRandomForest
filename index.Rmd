@@ -9,6 +9,7 @@ date: "`r paste('Last updated on', format(Sys.time(), '%d %B, %Y'))`"
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(tidyr))
 suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(DT))
 ```
 
 ```{r getting variables, echo=FALSE}
@@ -44,7 +45,7 @@ I use the forest inventory data base for the eastern North American forest.
 
 For each tree species in the data base (total of `r length(sp_ids)`), we will run a random forest for growth and mortality with different parameters and explanatory variables.
 Then we evaluate the simulation based on the R$^2$ for the growth and the out-of-bag estimate (1 - OOB) for mortality.
-For mortality, in which alive events are much more frequent than dead events, we avoid overestimating OOB by balancing the sampling weights to have the same number of observations from each class as suggested by Janitza & Hornung ([2018](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0201904)).
+For mortality, in which alive events are much more frequent than dead events, we avoid overestimating OOB by balancing the sampling weights to have the same number of observations from each class as suggested in Janitza & Hornung ([2018](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0201904)).
 We further check which variables have a better explanatory power over the response variable.
 
 # Simulations
@@ -71,12 +72,18 @@ dfPw$nbTrees <- as.factor(dfPw$nbTrees)
 dfPw$nbMtry <- as.factor(dfPw$nbMtry)
 dfPw$pw <- rep(NA, nrow(dfPw))
 
+# add species information
+sp_info <- read.table('data/sp_info.txt')
+dfPw <- merge(dfPw, sp_info[, c(1, 2, 5)], by.x = 'sp', by.y = 'species_id')
+
+# reorganize df
+dfPw <- dfPw[, c(2, 1, 7, 8, 3, 4, 5, 6)]
+
 # data frame to get importance
 dfImportance <- as.data.frame(matrix(rep(NA, length(var1) * nrow(dfPw)), ncol = length(var1)))
 names(dfImportance) <- var1
 
 # load each simulation and import all information
-count = 1
 for(vital in c('growth', 'mort')) {
   for(sp in sp_ids) {
     for(var in variables) {
@@ -100,14 +107,11 @@ for(vital in c('growth', 'mort')) {
           impRF <- ranger::importance(sim)
           dfImportance[Row, names(impRF)] <- impRF
 
-          cat('   loading simulations', floor(count/nrow(dfPw) * 100), '%\r')
-          count <- count + 1
         }
       }
     }
   }
 }
-
 
 # tranform to long format
 dfLong = gather(cbind(dfPw, dfImportance), variable, importance, growth:tot_pp_period3_lag, factor_key = TRUE)
@@ -122,6 +126,8 @@ pwSp <- merge(pwSp, read.table('data/trainingSize_spIds.txt'), by.x = c('vital',
 ```
 
 ## Variables set
+
+Which variable set explains the best for growth and mortality?
 
 ```{r variables set, echo=FALSE}
 p = ggplot(data = dfPw) +
@@ -200,9 +206,11 @@ print(p)
 
 ## Individual species response
 
+Which species perform the better?
+
 ```{r species_id, echo=FALSE}
 p = ggplot(data = dfPw) +
-    aes(reorder(sp, pw, FUN = median), pw) +
+    aes(reorder(latin, pw, FUN = median), pw) +
     geom_boxplot() +
     coord_flip() +
     facet_grid(~vital,
@@ -210,12 +218,53 @@ p = ggplot(data = dfPw) +
                                   'mort (1 - OOB prediction error)'),
                                   c('growth', 'mort')))) +
     theme_classic() +
-    xlab("Species id") +
+    xlab("Species") +
     ylab("Explanatory power of variables")
 
 print(p)
 ```
 
+What was the best predictor for each species?
+
+```{r best predictors by species, echo=FALSE}
+
+## Get sample size with median pw
+bestPredicSp <- dfLong %>%
+                group_by(vital, latin) %>%
+                summarise(bestPredic = variable[which.max(importance)])
+
+bestPredicWide <- spread(bestPredicSp, vital, bestPredic)
+
+DT::datatable(bestPredicWide)
+```
+
+And when species are grouped by tolerance to shade? _**H**igh, **M**edium, and **L**ow tolerance to shade_.
+
+```{r shade tolerance, echo=FALSE}
+p = ggplot(data = droplevels(subset(dfLong, var == 2 & variable %in% var2))) +
+    aes(reorder(tolLevel, importance, FUN = median), importance) +
+    geom_boxplot() +
+    coord_flip() +
+    facet_grid(variable~vital, scales = "free_x") +
+    theme_classic() +
+    xlab("Tolerance level") +
+    ylab("Importance")
+
+suppressWarnings(print(p))
+```
+
+```{r shade tolerance table, echo=FALSE}
+bestPredicSp <- dfLong %>%
+                group_by(vital, tolLevel) %>%
+                summarise(bestPredic = variable[which.max(importance)])
+
+bestPredicWide <- spread(bestPredicSp, vital, bestPredic)
+
+DT::datatable(bestPredicWide)
+```
+
+
+Is there a correlation between explanatory power and sample size?
 
 ```{r species_id vs n, echo=FALSE}
 p = ggplot(data = pwSp) +
