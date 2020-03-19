@@ -23,6 +23,7 @@ set.seed(0.0)
 
   mort = readRDS('../Mortality/data/mort_dt.RDS')
   growth = readRDS('../Mortality/data/growth_dt.RDS')
+  fec = readRDS('../Mortality/data/fec_dt.RDS')
 
 ##
 
@@ -48,19 +49,30 @@ set.seed(0.0)
 
   # split by vital rate, species id and training/validation data and save it all
   count = 1
-  for(vital in c('mort', 'growth'))
+  for(vital in c('mort', 'growth', 'fec'))
   {
     for(sp in sp_ids)
     {
       db_sp = get(vital)[species_id == sp]
 
-      ## get training data
-      # Calculate the size of each of the data sets:
-      trainingSize <- floor(nrow(db_sp) * 0.7)
-      # Generate a random sample of "data_set_size" indexes
-      indexes <- sample(1:nrow(db_sp), size = trainingSize)
-      # Assign the data to the correct sets
-      training <- db_sp[indexes, ]
+      ## get training data (difference between 'growth/mort' and 'fec')
+      if(vital == 'fec') {
+        # Calculate the size of each of the data sets:
+        trainingSize <- floor(length(unique(db_sp$plot_id)) * 0.8)
+
+        # Generate a random sample of "data_set_size" indexes
+        plot_ids <- sample(unique(db_sp$plot_id), size = trainingSize)
+        # Assign the data to the correct sets
+        training <- db_sp[plot_id %in% plot_ids]
+
+      }else {
+        # Calculate the size of each of the data sets:
+        trainingSize <- floor(nrow(db_sp) * 0.7)
+        # Generate a random sample of "data_set_size" indexes
+        indexes <- sample(1:nrow(db_sp), size = trainingSize)
+        # Assign the data to the correct sets
+        training <- db_sp[indexes, ]
+      }
 
       # save trainingSize
       trainingSize_spIds[count, ] <- c(vital, sp, trainingSize)
@@ -83,6 +95,6 @@ set.seed(0.0)
 
 ## Clean up
 
-  rm(list = c('mort', 'growth', 'db_sp'))
+  rm(list = c('mort', 'growth', 'fec', 'db_sp'))
 
 ##

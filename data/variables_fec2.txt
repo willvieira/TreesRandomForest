@@ -1,0 +1,7 @@
+latitude
+longitude
+mean_temp_period_3_lag_mLag
+tot_pp_period3_lag_mLag
+s_star_mLag
+BA_mLag
+BA_sp_mLag
