@@ -41,7 +41,7 @@
   nbTrees = 1000
 
   # number of variables selected at each division of the trees
-  nbMtry = c(2, 3, 4, 5, 6)
+  nbMtry = c(2, 3, 4, 5)
 
   tSim = length(sp_ids) * length(variables) * length(nbTrees) * length(nbMtry)
   print(paste('Generating a total of', tSim, 'simulations'))
@@ -65,14 +65,14 @@ for(sp in sp_ids) {
         # send me email for all the info for the last simulation
         mail = ifelse(job == tSim, 'ALL', 'FAIL')
 
-        # Calculate memory usage depending on training size (factor of 0.08)
-        memory <- floor(trainingSize[sp, 2] * 0.08)
+        # Calculate memory usage depending on training size (factor of 0.08) #TODO
+        memory <- 5000
 
 # Bash + Rscript
 bash <- paste0('#!/bin/bash
 
 #SBATCH --account=def-dgravel
-#SBATCH -t 0-10:00:00
+#SBATCH -t 1-00:00:00
 #SBATCH --mem=', memory, '
 #SBATCH --job-name="', simName, '"
 #SBATCH --mail-user=willian.vieira@usherbrooke.ca

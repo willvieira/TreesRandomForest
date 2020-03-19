@@ -105,3 +105,31 @@ set.seed(0.0)
   rm(list = c('db_sp_mort', 'rf_survival'))
 
 ##
+
+
+
+## Run randomForest for mortality (set 3)
+  print('Running recruitment model 1')
+
+  # get mortality data
+  db_sp_fec = readRDS(paste0('rawData/fec_', sp, '.RDS'))
+
+  # keep only variables of interest
+  varsToKeep <- as.character(read.table(paste0('data/variables_fec', var, '.txt'))[, 1])
+  db_sp_fec = db_sp_fec[, c('nbRecruit', varsToKeep), with = FALSE]
+
+  # perfom random forest
+  rf_regeneration <- ranger::ranger(nbRecruit ~ .,
+                                    data = db_sp_fec,
+                                    num.trees = nTrees,
+                                    mtry = Mtry,
+                                    importance = 'impurity_corrected',
+                                    write.forest = FALSE)
+
+  saveRDS(rf_regeneration,
+  file = paste0('output/fec_', sp, '_var', var, '_nTrees', nTrees, '_Mtry', Mtry, '.RDS'))
+
+  # clean memory
+  rm(list = c('db_sp_fec', 'rf_regeneration'))
+
+##
