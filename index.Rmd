@@ -80,8 +80,8 @@ dfPw <- merge(dfPw, sp_info[, c(1, 2, 5)], by.x = 'sp', by.y = 'species_id')
 dfPw <- dfPw[, c(2, 1, 7, 8, 3, 4, 5, 6)]
 
 # data frame to get importance
-dfImportance <- as.data.frame(matrix(rep(NA, length(var1) * nrow(dfPw)), ncol = length(var1)))
-names(dfImportance) <- var1
+dfImportance <- as.data.frame(matrix(rep(NA, length(vars) * nrow(dfPw)), ncol = length(vars)))
+names(dfImportance) <- vars
 
 # load each simulation and import all information
 for(vital in c('growth', 'mort')) {
@@ -122,7 +122,11 @@ pwSp <- dfPw %>%
         group_by(vital, sp) %>%
         summarise(median = median(pw))
 
+# add training size
 pwSp <- merge(pwSp, read.table('data/trainingSize_spIds.txt'), by.x = c('vital', 'sp'), by.y = c('vital', 'sp'))
+
+# add species info
+pwSp <- merge(pwSp, sp_info[, 1:2], by.x = 'sp', by.y = 'species_id')
 ```
 
 ## Variables set
@@ -146,15 +150,15 @@ print(p)
 
 Assuming the set of variables `var2` was the best to explain growth and mortality, let's see the importance of the variables present in the set `var2`:
 
-```{r variable set importance, echo=FALSE}
+```{r variable set importance growth, echo=FALSE}
 p = ggplot(data = droplevels(subset(dfLong, var == 2 & variable %in% var2))) +
-    aes(reorder(variable, importance, FUN = median), importance) +
+    aes(reorder(variable, importance, FUN = median), log(importance)) +
     geom_boxplot() +
     coord_flip() +
     facet_grid(~vital, scales = "free_x") +
     theme_classic() +
     xlab("Variables in set 2") +
-    ylab("Importance")
+    ylab("Importance (log)")
 
 suppressWarnings(print(p))
 ```
@@ -163,26 +167,26 @@ Now for the other two sets of variables (`var1` and `var3`):
 
 ```{r variable set importance2, echo=FALSE}
 p = ggplot(data = droplevels(subset(dfLong, var == 1 & variable %in% var1))) +
-    aes(reorder(variable, importance, FUN = median), importance) +
+    aes(reorder(variable, importance, FUN = median), log(importance)) +
     geom_boxplot() +
     coord_flip() +
     facet_grid(~vital, scales = "free_x") +
     theme_classic() +
     xlab("Variables in set 1") +
-    ylab("Importance")
+    ylab("Importance (log)")
 
 suppressWarnings(print(p))
 ```
 
 ```{r variable set importance3, echo=FALSE}
 p = ggplot(data = droplevels(subset(dfLong, var == 3 & variable %in% var3))) +
-    aes(reorder(variable, importance, FUN = median), importance) +
+    aes(reorder(variable, importance, FUN = median), log(importance)) +
     geom_boxplot() +
     coord_flip() +
     facet_grid(~vital, scales = "free_x") +
     theme_classic() +
     xlab("Variables in set 3") +
-    ylab("Importance")
+    ylab("Importance (log)")
 
 suppressWarnings(print(p))
 ```
@@ -280,4 +284,16 @@ p = ggplot(data = pwSp) +
     ylab("Explanatory power of variables")
 
 print(p)
+```
+
+```{r table with performance and n, echo=FALSE}
+names(pwSp)[3] <- 'Explain'
+pwSp$Explain <- round(pwSp$Explain, 3)
+
+perform <- pivot_wider(data = pwSp,
+                 id_cols = latin,
+                 names_from = vital,
+                 values_from = c("Explain", "trainingSize"))
+
+DT::datatable(perform)
 ```
