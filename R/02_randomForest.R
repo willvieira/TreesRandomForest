@@ -28,17 +28,14 @@ set.seed(0.0)
   sp = args[1]
 
   # variables
-  var = args[2]
-  varsToKeep = as.character(read.table(paste0('data/variables', var, '.txt'))[, 1])
+  varsToKeep = as.character(read.table('data/variables.txt')[, 1])
+  varsToKeepFec = as.character(read.table('data/variables_fec.txt')[, 1])
 
   # random forest parameters
-  nTrees = as.numeric(args[3])
-  Mtry = as.numeric(args[4])
+  nTrees = 1000
+  Mtry = 2
 
-  print('Running job:');print(paste(sp, var, nTrees, Mtry, sep = '.'))
-
-  # Save forest for all species when var == 2 and mtry == 6
-  writeForest <- ifelse(var == 2 & Mtry == 6, TRUE, FALSE)
+  print(paste('Running job for species: ', sp))
 
 ##
 
@@ -46,26 +43,26 @@ set.seed(0.0)
 
 ## Run randomForest for growth
   print('Running growth model')
-
+  
   # get growth data
   db_sp_growth = readRDS(paste0('rawData/growth_', sp, '.RDS'))
-
+  
   # keep only variables of interest
   db_sp_growth = db_sp_growth[, varsToKeep, with = FALSE]
-
+  
   # perfom random forest
   rf_regression <- ranger::ranger(growth ~ .,
                                   data = db_sp_growth,
                                   num.trees = nTrees,
                                   mtry = Mtry,
                                   importance = 'impurity_corrected',
-                                  write.forest = writeForest,
+                                  write.forest = FALSE,
                                   verbose = FALSE)
-
+  
   # save results
   saveRDS(rf_regression,
-  file = paste0('output/growth_', sp, '_var', var, '_nTrees', nTrees, '_Mtry', Mtry, '.RDS'))
-
+  file = paste0('output/growth_', sp, '.RDS'))
+  
   # clean memory
   rm(list = c('db_sp_growth', 'rf_regression'))
 
@@ -75,20 +72,20 @@ set.seed(0.0)
 
 ## Run randomForest for mortality (set 3)
   print('Running mortality model')
-
+  
   # get mortality data
   db_sp_mort = readRDS(paste0('rawData/mort_', sp, '.RDS'))
-
+  
   # keep only variables of interest
   db_sp_mort = db_sp_mort[, c('mort', varsToKeep), with = FALSE]
-
+  
   #Compute weights to balance the RF
   w <- 1/table(db_sp_mort$mort)
   w <- w/sum(w)
   weights <- rep(0, nrow(db_sp_mort))
   weights[db_sp_mort$mort == 0] <- w['0']
   weights[db_sp_mort$mort == 1] <- w['1']
-
+  
   # perfom random forest
   rf_survival <- ranger::ranger(as.factor(mort) ~ .,
                                  data = db_sp_mort,
@@ -96,11 +93,11 @@ set.seed(0.0)
                                  num.trees = nTrees,
                                  mtry = Mtry,
                                  importance = 'impurity_corrected',
-                                 write.forest = writeForest)
-
+                                 write.forest = FALSE)
+  
   saveRDS(rf_survival,
-  file = paste0('output/mort_', sp, '_var', var, '_nTrees', nTrees, '_Mtry', Mtry, '.RDS'))
-
+  file = paste0('output/mort_', sp, '.RDS'))
+  
   # clean memory
   rm(list = c('db_sp_mort', 'rf_survival'))
 
@@ -109,14 +106,13 @@ set.seed(0.0)
 
 
 ## Run randomForest for mortality (set 3)
-  print('Running recruitment model 1')
+  print('Running recruitment model')
 
   # get mortality data
   db_sp_fec = readRDS(paste0('rawData/fec_', sp, '.RDS'))
 
   # keep only variables of interest
-  varsToKeep <- as.character(read.table(paste0('data/variables_fec', var, '.txt'))[, 1])
-  db_sp_fec = db_sp_fec[, c('nbRecruit', varsToKeep), with = FALSE]
+  db_sp_fec = db_sp_fec[, c('nbRecruit', varsToKeepFec), with = FALSE]
 
   # perfom random forest
   rf_regeneration <- ranger::ranger(nbRecruit ~ .,
@@ -127,7 +123,7 @@ set.seed(0.0)
                                     write.forest = FALSE)
 
   saveRDS(rf_regeneration,
-  file = paste0('output/fec_', sp, '_var', var, '_nTrees', nTrees, '_Mtry', Mtry, '.RDS'))
+  file = paste0('output/fec_', sp, '.RDS'))
 
   # clean memory
   rm(list = c('db_sp_fec', 'rf_regeneration'))

@@ -28,21 +28,6 @@
   # species_id
   sp_ids = as.character(read.table('data/sp_ids.txt')[, 1])
 
-  # other variables from the simulation file
-  rFile <- readLines('R/03_runSimulations.R')
-
-  # variables
-  eval(parse(text =
-    rFile[which(sapply(rFile, function(x) grep('variables = ', x)) == 1)]))
-
-  # nbTrees
-  eval(parse(text =
-    rFile[which(sapply(rFile, function(x) grep('nbTrees = ', x)) == 1)]))
-
-  # nbMtry
-  eval(parse(text =
-    rFile[which(sapply(rFile, function(x) grep('nbMtry = ', x)) == 1)]))
-
 ##
 
 
@@ -51,16 +36,10 @@
 
   filesName = c(); count = 1
 
-  for(vital in c('growth', 'mort')) {
+  for(vital in c('fec', 'mort', 'growth')) {
     for(sp in sp_ids) {
-      for(var in variables) {
-        for(tree in nbTrees) {
-          for(mty in nbMtry) {
-            filesName[count] = paste0(vital, '_', sp, '_var', var, '_nTrees', nbTrees, '_Mtry', mty, '.RDS')
-            count <- count + 1
-          }
-        }
-      }
+      filesName[count] = paste0(vital, '_', sp, '.RDS')
+      count <- count + 1
     }
   }
 

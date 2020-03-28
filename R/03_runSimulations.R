@@ -34,16 +34,13 @@
   # read trainingSize of each species id
   trainingSize <- read.table('data/trainingSize_spIds.txt')
 
-  # predictors variables (3 sets)
-  variables = 1:3
-
   # number of trees
   nbTrees = 1000
 
   # number of variables selected at each division of the trees
-  nbMtry = c(2, 3, 4, 5)
+  nbMtry = 2
 
-  tSim = length(sp_ids) * length(variables) * length(nbTrees) * length(nbMtry)
+  tSim = length(sp_ids)
   print(paste('Generating a total of', tSim, 'simulations'))
 
 ##
@@ -55,18 +52,15 @@
 # create bash with Rscript
 job = 1
 for(sp in sp_ids) {
-  for(var in variables) {
-    for(tree in nbTrees) {
-      for(mtr in nbMtry) {
 
-        # name of simulation
-        simName = paste(which(sp == sp_ids), var, tree, mtr, sep = '.')
+  # name of simulation
+  simName = sp
 
-        # send me email for all the info for the last simulation
-        mail = ifelse(job == tSim, 'ALL', 'FAIL')
+  # send me email for all the info for the last simulation
+  mail = ifelse(job == tSim, 'ALL', 'FAIL')
 
-        # Calculate memory usage depending on training size (factor of 0.08) #TODO
-        memory <- 5000
+  # Calculate memory usage depending on training size (factor of 0.08) #TODO
+  memory <- 2500
 
 # Bash + Rscript
 bash <- paste0('#!/bin/bash
@@ -78,22 +72,19 @@ bash <- paste0('#!/bin/bash
 #SBATCH --mail-user=willian.vieira@usherbrooke.ca
 #SBATCH --mail-type=', mail, '
 
-Rscript /home/view2301/TreesRandomForest/R/02_randomForest.R ', sp, ' ', var, ' ', tree, ' ', mtr)
+Rscript /home/view2301/TreesRandomForest/R/02_randomForest.R ', sp)
 
-      # save sh file
-      system(paste0("echo ", "'", bash, "' > sub.sh"))
+  # save sh file
+  system(paste0("echo ", "'", bash, "' > sub.sh"))
 
-      # run sh
-      system('sbatch sub.sh')
+  # run sh
+  system('sbatch sub.sh')
 
-      # remove sh file
-      system('rm sub.sh')
+  # remove sh file
+  system('rm sub.sh')
 
-      cat('                           - job ', job, 'of', tSim, '\r')
-      job <- job + 1
-      }
-    }
-  }
-}
+  cat('                     - job ', job, 'of', tSim, '\r')
+  job <- job + 1
 
+} 
 ##

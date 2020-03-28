@@ -1,0 +1,7 @@
+plot_id
+deltaYear
+longitude
+min_extreme_temp_mLag
+tot_annual_pp_lag_mLag
+s_star_mLag
+relativeBA_sp_mLag
