@@ -78,3 +78,5 @@ vignettes/*.pdf
 # R data
 *.RDS
 _server.yml
+_dataLink
+rawData/*

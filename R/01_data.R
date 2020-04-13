@@ -21,9 +21,24 @@ set.seed(0.0)
 
 ## Import datasets
 
-  mort = readRDS('../Mortality/data/mort_dt.RDS')
-  growth = readRDS('../Mortality/data/growth_dt.RDS')
-  fec = readRDS('../Mortality/data/fec_dt.RDS')
+  dataLink <- readLines('_dataLink')
+  dataFile <- 'rawData/forest_dt.tar'
+  dataFolder <- 'rawData/'
+
+  # create folder
+  if(!dir.exists(dataFolder)) dir.create(dataFolder)
+
+  # download data
+  if(!file.exists(dataFile))
+    download.file(dataLink, dataFile, method = 'auto', quiet = TRUE)
+
+  # unzip
+  untar(dataFile, exdir = 'rawData')
+  file.remove(dataFile)
+
+  mort = readRDS('rawData/data/mort_dt.RDS')
+  growth = readRDS('rawData/data/growth_dt.RDS')
+  fec = readRDS('rawData/data/fec_dt.RDS')
 
 ##
 
