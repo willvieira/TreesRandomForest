@@ -22,19 +22,29 @@ set.seed(0.0)
 ## Import datasets
 
   dataLink <- readLines('_dataLink')
-  dataFile <- 'rawData/forest_dt.tar'
+  dataFile <- paste0('rawData/forest_dt.', ifelse(Sys.info()['sysname'] == 'Darwin', 'tar', 'zip'))
   dataFolder <- 'rawData/'
+	vitalFiles <- paste0('rawData/data/', c('mort', 'growth', 'fec'), '_dt.RDS')
 
-  # create folder
-  if(!dir.exists(dataFolder)) dir.create(dataFolder)
+  # Download and unzip file?
+  if(!any(file.exists(vitalFiles)))
+  {
+    # create folder
+    if(!dir.exists(dataFolder)) dir.create(dataFolder)
 
-  # download data
-  if(!file.exists(dataFile))
-    download.file(dataLink, dataFile, method = 'auto', quiet = TRUE)
+    # download data
+    if(!file.exists(dataFile))
+        download.file(dataLink, dataFile, method = 'auto', quiet = TRUE)
 
-  # unzip
-  untar(dataFile, exdir = 'rawData')
-  file.remove(dataFile)
+    # unzip
+    if(Sys.info()['sysname'] == 'Darwin')
+    {
+      untar(dataFile, exdir = 'rawData')
+    }else{
+      unzip(dataFile, exdir = 'rawData')
+    }
+    invisible(file.remove(dataFile))
+  }
 
   mort = readRDS('rawData/data/mort_dt.RDS')
   growth = readRDS('rawData/data/growth_dt.RDS')
