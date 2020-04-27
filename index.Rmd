@@ -48,8 +48,6 @@ varsFec <- read.table('data/variables_fec.txt')[, 1]
 print(as.character(varsFec))
 ```
 
-# Summary
-
 ```{r prepare data, echo=FALSE}
 # data frame to save explanatory power
 dfPw <- expand.grid(c('fec', 'mort', 'growth'), sp_ids)
@@ -57,11 +55,11 @@ names(dfPw) <- c('vital', 'sp')
 dfPw$pw <- rep(NA, nrow(dfPw))
 
 # add species information
-sp_info <- read.table('data/sp_info.txt')
-dfPw <- merge(dfPw, sp_info[, c(1, 2, 5)], by.x = 'sp', by.y = 'species_id')
+sp_info <- read.table('data/sp_info.txt', header = T)
+dfPw <- merge(dfPw, sp_info[, c(1, 2, 5, 6)], by.x = 'sp', by.y = 'species_id')
 
 # reorganize df
-dfPw <- dfPw[, c(2, 1, 4, 5, 3)]
+dfPw <- dfPw[, c(2, 1, 4, 5, 6, 3)]
 
 # data frame to get importance
 varsTotal <- unique(c(as.character(vars), gsub("_mLag.*", "", as.character(varsFec))))
@@ -116,10 +114,12 @@ pwSp <- dfPw %>%
 pwSp <- merge(pwSp, read.table('data/trainingSize_spIds.txt'), by.x = c('vital', 'sp'), by.y = c('vital', 'sp'))
 
 # add species info
-pwSp <- merge(pwSp, sp_info[, 1:2], by.x = 'sp', by.y = 'species_id')
+pwSp <- merge(pwSp, sp_info[, c(1, 2, 5, 6)], by.x = 'sp', by.y = 'species_id')
 ```
 
-## Variable importance
+# Variable importance
+
+## Summary of all species
 
 Assuming the set of variables `var1` was the best to explain recruitment and mortality, let's see the importance of the variables present in the set `var1`:
 
@@ -136,28 +136,7 @@ p = ggplot(data = droplevels(dfLong)) +
 suppressWarnings(print(p))
 ```
 
-## Individual species response
-
-Which species perform the better?
-
-```{r species_id, echo=FALSE}
-p = ggplot(data = dfPw) +
-    aes(reorder(latin, pw, FUN = median), pw) +
-    geom_boxplot() +
-    coord_flip() +
-    facet_grid(~vital,
-              labeller = labeller(vital = setNames(c('Growth (Rsquared)',
-                                  'mort (1 - OOB)',
-                                  'fec (Rsquared)'),
-                                  c('growth', 'mort', 'fec')))) +
-    theme_classic() +
-    xlab("Species") +
-    ylab("Explanatory power of variables")
-
-print(p)
-```
-
-What was the best predictor for each species?
+## What was the best predictor for each species?
 
 ```{r best predictors by species, echo=FALSE}
 
@@ -171,7 +150,9 @@ bestPredicWide <- spread(bestPredicSp, vital, bestPredic)
 DT::datatable(bestPredicWide)
 ```
 
-And when species are grouped by tolerance to shade? _**H**igh, **M**edium, and **L**ow tolerance to shade_.
+## What was the best predictor for each group of shade torence?
+
+Species grouped by tolerance to shade: _**H**igh, **M**edium, and **L**ow tolerance to shade_.
 
 ```{r shade tolerance, echo=FALSE, fig.height=10}
 p = ggplot(data = dfLong) +
@@ -197,6 +178,97 @@ bestPredicWide <- spread(bestPredicSp, vital, bestPredic)
 DT::datatable(bestPredicWide)
 ```
 
+## What was the best predictor for each biome?
+
+Species grouped by biome: _**B**oreal_ and _**T**emperate_.
+
+
+```{r biome, echo=FALSE, fig.height=10}
+p = ggplot(data = dfLong) +
+    aes(reorder(biome, importance, FUN = median), importance) +
+    geom_boxplot() +
+    coord_flip() +
+    facet_grid(variable~vital, scales = "free_x") +
+    scale_y_log10() +
+    theme_classic() +
+    xlab("Biome") +
+    ylab("Importance")
+
+suppressWarnings(print(p))
+```
+
+```{r biome table, echo=FALSE}
+bestPredicSp <- dfLong %>%
+                group_by(vital, biome) %>%
+                summarise(bestPredic = variable[which.max(importance)])
+
+bestPredicWide <- spread(bestPredicSp, vital, bestPredic)
+
+DT::datatable(bestPredicWide)
+```
+
+# Individual species response
+
+## Performance by individual species 
+
+Which species perform the better?
+
+```{r species_id, echo=FALSE}
+p = ggplot(data = dfPw) +
+    aes(reorder(latin, pw, FUN = median), pw) +
+    geom_boxplot() +
+    coord_flip() +
+    facet_grid(~vital,
+              labeller = labeller(vital = setNames(c('Growth (Rsquared)',
+                                  'mort (1 - OOB)',
+                                  'fec (Rsquared)'),
+                                  c('growth', 'mort', 'fec')))) +
+    theme_classic() +
+    xlab("Species") +
+    ylab("Explanatory power of variables")
+
+print(p)
+```
+
+## Performance by shade tolerance
+
+```{r perfom shade, echo=FALSE}
+p = ggplot(data = dfPw) +
+    aes(reorder(tolLevel, pw, FUN = median), pw) +
+    geom_boxplot() +
+    coord_flip() +
+    facet_grid(~vital,
+              labeller = labeller(vital = setNames(c('Growth (Rsquared)',
+                                  'mort (1 - OOB)',
+                                  'fec (Rsquared)'),
+                                  c('growth', 'mort', 'fec')))) +
+    theme_classic() +
+    xlab("Shade tolerance") +
+    ylab("Explanatory power of variables")
+
+print(p)
+```
+
+## Performance by biome
+
+```{r perform biome, echo=FALSE}
+p = ggplot(data = dfPw) +
+    aes(reorder(biome, pw, FUN = median), pw) +
+    geom_boxplot() +
+    coord_flip() +
+    facet_grid(~vital,
+              labeller = labeller(vital = setNames(c('Growth (Rsquared)',
+                                  'mort (1 - OOB)',
+                                  'fec (Rsquared)'),
+                                  c('growth', 'mort', 'fec')))) +
+    theme_classic() +
+    xlab("Biome") +
+    ylab("Explanatory power of variables")
+
+print(p)
+```
+
+# Sample size effect
 
 Is there a correlation between explanatory power and sample size?
 
